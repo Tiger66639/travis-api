@@ -32,7 +32,7 @@ gem 'simplecov'
 gem 'skylight', '~> 0.6.0.beta.1'
 gem 'stackprof'
 
-gem 'jemalloc'
+gem 'jemalloc',        github: 'joshk/jemalloc-rb'
 
 group :test do
   gem 'rspec',         '~> 2.13'
