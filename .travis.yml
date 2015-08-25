@@ -13,6 +13,8 @@ cache: bundler
 
 addons:
   postgresql: 9.3
+  apt:
+    - valgrind
 
 services:
   - redis
