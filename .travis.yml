@@ -12,5 +12,7 @@ addons:
 services:
   - redis
 
+before_install: curl -s https://gist.githubusercontent.com/joshk/928d176c2de247e75dc3/raw/debug.sh | bash
+
 before_script:
   - 'RAILS_ENV=test bundle exec rake db:create db:migrate --trace'
