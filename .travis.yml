@@ -1,6 +1,6 @@
 language: ruby
 
-sudo: false
+sudo: 9000
 
 rvm: 2.1.5
 
