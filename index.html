@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link href='https://fonts.googleapis.com/css?family=Architects+Daughter' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print">
+
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <title>Travis-api by Tiger66639</title>
+  </head>
+
+  <body>
+    <header>
+      <div class="inner">
+        <h1>Travis-api</h1>
+        <h2>The public Travis API</h2>
+        <a href="https://github.com/Tiger66639/travis-api" class="button"><small>View project on</small> GitHub</a>
+      </div>
+    </header>
+
+    <div id="content-wrapper">
+      <div class="inner clearfix">
+        <section id="main-content">
+          <h1>
+<a id="the-public-travis-api" class="anchor" href="#the-public-travis-api" aria-hidden="true"><span class="octicon octicon-link"></span></a>The public Travis API</h1>
+
+<p>This is the app running on <a href="https://api.travis-ci.org/">https://api.travis-ci.org/</a></p>
+
+<h2>
+<a id="requirements" class="anchor" href="#requirements" aria-hidden="true"><span class="octicon octicon-link"></span></a>Requirements</h2>
+
+<ol>
+<li>PostgreSQL 9.3 or higher</li>
+<li>Redis</li>
+<li>RabbitMQ</li>
+</ol>
+
+<h2>
+<a id="installation" class="anchor" href="#installation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Installation</h2>
+
+<h3>
+<a id="setup" class="anchor" href="#setup" aria-hidden="true"><span class="octicon octicon-link"></span></a>Setup</h3>
+
+<pre><code>$ bundle install
+</code></pre>
+
+<h3>
+<a id="database-setup" class="anchor" href="#database-setup" aria-hidden="true"><span class="octicon octicon-link"></span></a>Database setup</h3>
+
+<ol>
+<li><code>rake db:create db:structure:load</code></li>
+<li>Clone <code>travis-logs</code> and copy the <code>logs</code> database (assume the PostgreSQL user is <code>postgres</code>):</li>
+</ol>
+
+<div class="highlight highlight-text-shell-session"><pre><span class="pl-mo">cd ..</span>
+<span class="pl-mo">git clone https://github.com/travis-ci/travis-logs.git</span>
+<span class="pl-mo">cd travis-logs</span>
+<span class="pl-mo">rvm jruby do bundle exec rake db:migrate # `travis-logs` requires JRuby</span>
+<span class="pl-mo">psql -c "DROP TABLE IF EXISTS logs CASCADE" -U postgres travis_development</span>
+<span class="pl-mo">pg_dump -t logs travis_logs_development | psql -U postgres travis_development</span></pre></div>
+
+<p>Repeat the database steps for <code>RAILS_ENV=test</code>.</p>
+
+<div class="highlight highlight-text-shell-session"><pre><span class="pl-mo">RAILS_ENV=test rake db:create db:structure:load</span>
+<span class="pl-mo">pushd ../travis-logs</span>
+<span class="pl-mo">RAILS_ENV=test rvm jruby do bundle exec rake db:migrate</span>
+<span class="pl-mo">psql -c "DROP TABLE IF EXISTS logs CASCADE" -U postgres travis_test</span>
+<span class="pl-mo">pg_dump -t logs travis_logs_test | psql -U postgres travis_test</span>
+<span class="pl-mo">popd</span></pre></div>
+
+<h3>
+<a id="run-tests" class="anchor" href="#run-tests" aria-hidden="true"><span class="octicon octicon-link"></span></a>Run tests</h3>
+
+<pre><code>$ rake spec
+</code></pre>
+
+<h3>
+<a id="run-the-server" class="anchor" href="#run-the-server" aria-hidden="true"><span class="octicon octicon-link"></span></a>Run the server</h3>
+
+<pre><code>$ script/server
+</code></pre>
+
+<h2>
+<a id="contributing" class="anchor" href="#contributing" aria-hidden="true"><span class="octicon octicon-link"></span></a>Contributing</h2>
+
+<ol>
+<li>Fork it</li>
+<li>Create your feature branch (<code>git checkout -b my-new-feature</code>)</li>
+<li>Commit your changes (<code>git commit -am 'Add some feature'</code>)</li>
+<li>Push to the branch (<code>git push origin my-new-feature</code>)</li>
+<li>Create new Pull Request</li>
+</ol>
+
+<h3>
+<a id="api-documentation" class="anchor" href="#api-documentation" aria-hidden="true"><span class="octicon octicon-link"></span></a>API documentation</h3>
+
+<p>We use source code comments to add documentation. If the server is running, you
+can browse an HTML documenation at <a href="http://localhost:5000/docs"><code>/docs</code></a>.</p>
+
+<h3>
+<a id="project-architecture" class="anchor" href="#project-architecture" aria-hidden="true"><span class="octicon octicon-link"></span></a>Project architecture</h3>
+
+<pre><code>lib
+`-- travis
+    `-- api
+        `-- app
+            |-- endpoint    # API endpoints
+            |-- extensions  # Sinatra extensions
+            |-- helpers     # Sinatra helpers
+            `-- middleware  # Rack middleware
+</code></pre>
+
+<p>Classes inheriting from <code>Endpoint</code> or <code>Middleware</code>, they will automatically be
+set up properly.</p>
+
+<p>Each endpoint class gets mapped to a prefix, which defaults to the snake-case
+class name (i.e. <code>Travis::Api::App::Profile</code> will map to <code>/profile</code>).
+It can be overridden by setting <code>:prefix</code>:</p>
+
+<div class="highlight highlight-source-ruby"><pre><span class="pl-k">require</span> <span class="pl-s"><span class="pl-pds">'</span>travis/api/app<span class="pl-pds">'</span></span>
+
+<span class="pl-k">class</span> <span class="pl-en">Travis::Api::App</span>
+  <span class="pl-k">class</span> <span class="pl-en">MyRouts<span class="pl-e"> &lt; Endpoint</span></span>
+    set <span class="pl-c1">:prefix</span>, <span class="pl-s"><span class="pl-pds">'</span>/awesome<span class="pl-pds">'</span></span>
+  <span class="pl-k">end</span>
+<span class="pl-k">end</span></pre></div>
+        </section>
+
+        <aside id="sidebar">
+          <a href="https://github.com/Tiger66639/travis-api/zipball/master" class="button">
+            <small>Download</small>
+            .zip file
+          </a>
+          <a href="https://github.com/Tiger66639/travis-api/tarball/master" class="button">
+            <small>Download</small>
+            .tar.gz file
+          </a>
+
+          <p class="repo-owner"><a href="https://github.com/Tiger66639/travis-api"></a> is maintained by <a href="https://github.com/Tiger66639">Tiger66639</a>.</p>
+
+          <p>This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the Architect theme by <a href="https://twitter.com/jasonlong">Jason Long</a>.</p>
+        </aside>
+      </div>
+    </div>
+
+  
+  </body>
+</html>
